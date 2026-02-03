@@ -2,25 +2,25 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Firework - smallbrandings</title>
     <link href="https://fonts.googleapis.com/css2?family=Aboreto&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Aboreto', cursive; cursor: crosshair; color: #fff; }
-        canvas { display: block; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Aboreto', cursive; cursor: crosshair; color: #fff; touch-action: none; }
+        canvas { display: block; touch-action: none; }
         #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; transition: opacity 1s; }
-        #intro-layer h1 { font-size: 4rem; font-weight: 400; letter-spacing: 5px; margin: 0; animation: pulse 2.5s infinite; }
+        #intro-layer h1 { font-size: 12vw; font-weight: 400; letter-spacing: 5px; margin: 0; animation: pulse 2.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-        .ui-container { position: fixed; top: 20px; left: 20px; background: rgba(255, 255, 255, 0.08); padding: 15px 20px; border-radius: 15px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 10px; z-index: 100; opacity: 0; transition: opacity 1s; pointer-events: none; }
+        .ui-container { position: fixed; top: 10px; left: 10px; background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 8px; z-index: 100; opacity: 0; transition: opacity 1s; pointer-events: none; }
         .ui-container.visible { opacity: 1; pointer-events: auto; }
-        .bg-control { position: fixed; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.08); padding: 15px; border-radius: 15px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); z-index: 101; opacity: 0; transition: opacity 1s; }
+        .bg-control { position: fixed; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); z-index: 101; opacity: 0; transition: opacity 1s; }
         .bg-control.visible { opacity: 1; }
-        .bg-control label { display: block; font-size: 10px; margin-bottom: 5px; text-align: right; opacity: 0.7; }
-        #bg-slider { width: 120px; cursor: pointer; }
-        .controls { display: flex; align-items: center; gap: 10px; }
-        select { padding: 4px; border-radius: 5px; background: #111; color: #fff; border: 1px solid #444; font-size: 11px; }
-        .random-mode { font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .footer { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 10px; letter-spacing: 1.5px; opacity: 0.4; z-index: 50; pointer-events: none; text-transform: uppercase; }
+        .bg-control label { display: block; font-size: 9px; margin-bottom: 3px; text-align: right; opacity: 0.7; }
+        #bg-slider { width: 80px; cursor: pointer; }
+        .controls { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; max-width: 150px; }
+        select { padding: 3px; border-radius: 4px; background: #111; color: #fff; border: 1px solid #444; font-size: 10px; }
+        .random-mode { font-size: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; }
+        .footer { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: 1px; opacity: 0.4; z-index: 50; pointer-events: none; text-transform: uppercase; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -31,7 +31,7 @@
             <select class="color-picker" id="c1"></select>
             <select class="color-picker" id="c2"></select>
             <select class="color-picker" id="c3"></select>
-            <label class="random-mode"><input type="checkbox" id="random-check"> RANDOM COLOR</label>
+            <label class="random-mode"><input type="checkbox" id="random-check"> RANDOM</label>
         </div>
     </div>
     <div class="bg-control" id="bg-ui">
@@ -48,6 +48,9 @@
         const uiElements = [document.getElementById('main-ui'), document.getElementById('bg-ui')];
         const randomCheck = document.getElementById('random-check');
         const bgSlider = document.getElementById('bg-slider');
+
+        // 모바일 배율 (DPI) 대응
+        const dpr = window.devicePixelRatio || 1;
 
         const colorPalette = [
             { name: "GOLD", hue: 45, sat: 100 }, { name: "RED", hue: 0, sat: 100 },
@@ -81,7 +84,13 @@
             return Array.from(selects).map(s => colorPalette[s.value]);
         }
 
-        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        function resize() {
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            ctx.scale(dpr, dpr); // 드로잉 컨텍스트 배율 조정
+        }
         window.addEventListener('resize', resize);
         resize();
 
@@ -106,24 +115,17 @@
             constructor(x, y, color, zScale) {
                 this.x = x; this.y = y;
                 const angle = Math.random() * Math.PI * 2;
-                
-                // 도넛 현상 방지: 0부터 최대치까지 불규칙하게 내부를 채움
                 const force = Math.random() * (12 * zScale) + 0.5;
-                
                 this.vx = Math.cos(angle) * force;
                 this.vy = Math.sin(angle) * force;
-                
-                // 불규칙한 마찰로 입자 간 거리 분산
                 this.friction = 0.88 + (Math.random() * 0.08); 
                 this.gravity = (0.01 + Math.random() * 0.02) * zScale; 
-                
                 this.alpha = 1;
                 this.decay = (Math.random() * 0.003 + 0.004) / zScale; 
-                
-                // 색상의 명도를 낮게 설정하여 중심부 뭉침 시 화이트아웃 방지
                 const lightness = color.name === "WHITE" ? 90 : 45 + (Math.random() * 15);
                 this.color = `hsla(${color.hue}, ${color.sat}%, ${lightness}%, `;
-                this.size = (Math.random() * 0.5 + 0.15) * zScale; 
+                // 모바일 해상도에 따른 크기 보정
+                this.size = (Math.random() * 0.5 + 0.2) * zScale; 
             }
             update() {
                 this.vx *= this.friction; this.vy *= this.friction; this.vy += this.gravity;
@@ -137,10 +139,9 @@
         }
 
         function createParticles(x, y, colorSet) {
-            const zScale = Math.random() * 1.8 + 0.5;
-            let count = Math.floor(3500 * zScale);
-            // 메모리 관리
-            if (particles.length > 25000) count *= 0.4; 
+            const zScale = Math.random() * 1.5 + 0.6;
+            let count = Math.floor((window.innerWidth < 600 ? 1500 : 3500) * zScale);
+            if (particles.length > 15000) count *= 0.5; 
             
             for (let i = 0; i < count; i++) {
                 particles.push(new Particle(x, y, colorSet[Math.floor(Math.random() * colorSet.length)], zScale));
@@ -151,7 +152,7 @@
             requestAnimationFrame(loop);
             ctx.globalCompositeOperation = 'destination-out';
             ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; 
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
             ctx.globalCompositeOperation = 'lighter';
 
             for (let i = fireworks.length - 1; i >= 0; i--) {
@@ -167,10 +168,20 @@
             }
         }
 
-        window.addEventListener('mousedown', (e) => {
+        // 터치 및 클릭 통합 핸들러
+        function handleAction(e) {
             if (e.target.closest('.ui-container') || e.target.closest('.bg-control') || intro.style.display !== 'none') return;
-            fireworks.push(new Firework(e.clientX, canvas.height, e.clientX, e.clientY, getColors()));
-        });
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            fireworks.push(new Firework(clientX, window.innerHeight, clientX, clientY, getColors()));
+        }
+
+        window.addEventListener('mousedown', handleAction);
+        window.addEventListener('touchstart', (e) => {
+            handleAction(e);
+            // e.preventDefault(); // 기본 스크롤 방지 필요 시 활성화
+        }, { passive: false });
+
         loop();
     </script>
 </body>
