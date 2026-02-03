@@ -9,18 +9,18 @@
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Aboreto', cursive; cursor: crosshair; color: #fff; touch-action: none; }
         canvas { display: block; touch-action: none; }
         #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; transition: opacity 1s; }
-        #intro-layer h1 { font-size: 12vw; font-weight: 400; letter-spacing: 5px; margin: 0; animation: pulse 2.5s infinite; }
+        #intro-layer h1 { font-size: 10vw; font-weight: 400; letter-spacing: 5px; margin: 0; animation: pulse 2.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
         .ui-container { position: fixed; top: 10px; left: 10px; background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 8px; z-index: 100; opacity: 0; transition: opacity 1s; pointer-events: none; }
         .ui-container.visible { opacity: 1; pointer-events: auto; }
         .bg-control { position: fixed; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); z-index: 101; opacity: 0; transition: opacity 1s; }
         .bg-control.visible { opacity: 1; }
         .bg-control label { display: block; font-size: 9px; margin-bottom: 3px; text-align: right; opacity: 0.7; }
-        #bg-slider { width: 80px; cursor: pointer; }
-        .controls { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; max-width: 150px; }
-        select { padding: 3px; border-radius: 4px; background: #111; color: #fff; border: 1px solid #444; font-size: 10px; }
+        #bg-slider { width: 70px; cursor: pointer; }
+        .controls { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; max-width: 140px; }
+        select { padding: 3px; border-radius: 4px; background: #111; color: #fff; border: 1px solid #444; font-size: 10px; outline: none; }
         .random-mode { font-size: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; }
-        .footer { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: 1px; opacity: 0.4; z-index: 50; pointer-events: none; text-transform: uppercase; white-space: nowrap; }
+        .footer { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); font-size: 8px; letter-spacing: 1px; opacity: 0.3; z-index: 50; pointer-events: none; text-transform: uppercase; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -49,7 +49,6 @@
         const randomCheck = document.getElementById('random-check');
         const bgSlider = document.getElementById('bg-slider');
 
-        // 모바일 배율 (DPI) 대응
         const dpr = window.devicePixelRatio || 1;
 
         const colorPalette = [
@@ -89,7 +88,7 @@
             canvas.height = window.innerHeight * dpr;
             canvas.style.width = window.innerWidth + 'px';
             canvas.style.height = window.innerHeight + 'px';
-            ctx.scale(dpr, dpr); // 드로잉 컨텍스트 배율 조정
+            ctx.scale(dpr, dpr);
         }
         window.addEventListener('resize', resize);
         resize();
@@ -101,13 +100,12 @@
             constructor(sx, sy, tx, ty, colorSet) {
                 this.x = sx; this.y = sy; this.tx = tx; this.ty = ty;
                 this.colorSet = colorSet;
-                this.launchSpeed = 5.2; 
-                this.vy = -this.launchSpeed;
+                this.vy = -5.5;
             }
             update() { this.y += this.vy; return (this.y <= this.ty); }
             draw() {
                 ctx.fillStyle = "rgba(255, 255, 240, 1)";
-                ctx.beginPath(); ctx.arc(this.x, this.y, 1.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.x, this.y, 1.2, 0, Math.PI * 2); ctx.fill();
             }
         }
 
@@ -115,32 +113,48 @@
             constructor(x, y, color, zScale) {
                 this.x = x; this.y = y;
                 const angle = Math.random() * Math.PI * 2;
-                const force = Math.random() * (12 * zScale) + 0.5;
+                
+                // 모바일 최적화: 전체적인 확산 범위를 조금 더 응집시킴 (zScale 영향 축소)
+                const force = Math.random() * (9 * zScale) + 0.2;
+                
                 this.vx = Math.cos(angle) * force;
                 this.vy = Math.sin(angle) * force;
-                this.friction = 0.88 + (Math.random() * 0.08); 
-                this.gravity = (0.01 + Math.random() * 0.02) * zScale; 
+                this.friction = 0.9 + (Math.random() * 0.06); 
+                this.gravity = (0.015 + Math.random() * 0.02) * zScale; 
                 this.alpha = 1;
                 this.decay = (Math.random() * 0.003 + 0.004) / zScale; 
-                const lightness = color.name === "WHITE" ? 90 : 45 + (Math.random() * 15);
-                this.color = `hsla(${color.hue}, ${color.sat}%, ${lightness}%, `;
-                // 모바일 해상도에 따른 크기 보정
-                this.size = (Math.random() * 0.5 + 0.2) * zScale; 
+                
+                const lightness = color.name === "WHITE" ? 95 : 50 + (Math.random() * 20);
+                this.baseColor = `hsla(${color.hue}, ${color.sat}%, ${lightness}%, `;
+                this.size = (Math.random() * 0.4 + 0.1) * zScale; 
+                
+                // 스파클 효과용 변수
+                this.flicker = Math.random() > 0.5; 
             }
             update() {
                 this.vx *= this.friction; this.vy *= this.friction; this.vy += this.gravity;
-                this.x += this.vx; this.y += this.vy; this.alpha -= this.decay;
+                this.x += this.vx; this.y += this.vy;
+                this.alpha -= this.decay;
                 return (this.alpha <= 0);
             }
             draw() {
-                ctx.fillStyle = this.color + this.alpha + ")";
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+                // 스파클 로직: 소멸 시점에 랜덤하게 반짝임 부여
+                let currentAlpha = this.alpha;
+                if (this.alpha < 0.6 && Math.random() > 0.8) {
+                    currentAlpha = 1; // 찰나의 순간 밝아짐
+                }
+                
+                ctx.fillStyle = this.baseColor + currentAlpha + ")";
+                ctx.beginPath(); 
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); 
+                ctx.fill();
             }
         }
 
         function createParticles(x, y, colorSet) {
-            const zScale = Math.random() * 1.5 + 0.6;
-            let count = Math.floor((window.innerWidth < 600 ? 1500 : 3500) * zScale);
+            // 모바일 배율 조정 (최대 크기를 1.3배 정도로 제한)
+            const zScale = Math.random() * 0.8 + 0.5;
+            let count = Math.floor((window.innerWidth < 600 ? 1200 : 2500) * zScale);
             if (particles.length > 15000) count *= 0.5; 
             
             for (let i = 0; i < count; i++) {
@@ -151,7 +165,7 @@
         function loop() {
             requestAnimationFrame(loop);
             ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; 
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.22)'; 
             ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
             ctx.globalCompositeOperation = 'lighter';
 
@@ -168,7 +182,6 @@
             }
         }
 
-        // 터치 및 클릭 통합 핸들러
         function handleAction(e) {
             if (e.target.closest('.ui-container') || e.target.closest('.bg-control') || intro.style.display !== 'none') return;
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -177,10 +190,7 @@
         }
 
         window.addEventListener('mousedown', handleAction);
-        window.addEventListener('touchstart', (e) => {
-            handleAction(e);
-            // e.preventDefault(); // 기본 스크롤 방지 필요 시 활성화
-        }, { passive: false });
+        window.addEventListener('touchstart', handleAction, { passive: true });
 
         loop();
     </script>
