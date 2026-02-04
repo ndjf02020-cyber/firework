@@ -114,14 +114,12 @@
                 this.x = x; this.y = y;
                 const angle = Math.random() * Math.PI * 2;
                 const force = Math.random() * (9 * zScale) + 0.2;
-                
                 this.vx = Math.cos(angle) * force;
                 this.vy = Math.sin(angle) * force;
                 this.friction = 0.9 + (Math.random() * 0.06); 
                 this.gravity = (0.015 + Math.random() * 0.02) * zScale; 
                 this.alpha = 1;
                 this.decay = (Math.random() * 0.003 + 0.004) / zScale; 
-                
                 const lightness = color.name === "WHITE" ? 95 : 50 + (Math.random() * 20);
                 this.baseColor = `hsla(${color.hue}, ${color.sat}%, ${lightness}%, `;
                 this.size = (Math.random() * 0.4 + 0.1) * zScale; 
@@ -134,25 +132,16 @@
             }
             draw() {
                 let currentAlpha = this.alpha;
-                if (this.alpha < 0.6 && Math.random() > 0.8) {
-                    currentAlpha = 1; 
-                }
-                
+                if (this.alpha < 0.6 && Math.random() > 0.8) { currentAlpha = 1; }
                 ctx.fillStyle = this.baseColor + currentAlpha + ")";
-                ctx.beginPath(); 
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); 
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
             }
         }
 
         function createParticles(x, y, colorSet) {
             const zScale = Math.random() * 0.8 + 0.5;
-            // 파티클 양을 기존보다 2배(2400~5000개 수준)로 대폭 상향
             let count = Math.floor((window.innerWidth < 600 ? 2400 : 5000) * zScale);
-            
-            // 메모리 부하 방지를 위한 한계치 상향 조정
-            if (particles.length > 30000) count *= 0.5; 
-            
+            if (particles.length > 40000) count *= 0.3; 
             for (let i = 0; i < count; i++) {
                 particles.push(new Particle(x, y, colorSet[Math.floor(Math.random() * colorSet.length)], zScale));
             }
@@ -164,13 +153,11 @@
             ctx.fillStyle = 'rgba(0, 0, 0, 0.22)'; 
             ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
             ctx.globalCompositeOperation = 'lighter';
-
             for (let i = fireworks.length - 1; i >= 0; i--) {
                 const f = fireworks[i];
                 if (f.update()) { createParticles(f.tx, f.ty, f.colorSet); fireworks.splice(i, 1); } 
                 else { f.draw(); }
             }
-
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
                 if (p.update()) { particles.splice(i, 1); } 
@@ -178,15 +165,23 @@
             }
         }
 
-        function handleAction(e) {
+        // 멀티터치 대응 핸들러
+        function handleTouch(e) {
             if (e.target.closest('.ui-container') || e.target.closest('.bg-control') || intro.style.display !== 'none') return;
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            fireworks.push(new Firework(clientX, window.innerHeight, clientX, clientY, getColors()));
+            // 발생한 모든 터치 포인트에 대해 폭죽 생성
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                fireworks.push(new Firework(touch.clientX, window.innerHeight, touch.clientX, touch.clientY, getColors()));
+            }
         }
 
-        window.addEventListener('mousedown', handleAction);
-        window.addEventListener('touchstart', handleAction, { passive: true });
+        function handleMouse(e) {
+            if (e.target.closest('.ui-container') || e.target.closest('.bg-control') || intro.style.display !== 'none') return;
+            fireworks.push(new Firework(e.clientX, window.innerHeight, e.clientX, e.clientY, getColors()));
+        }
+
+        window.addEventListener('mousedown', handleMouse);
+        window.addEventListener('touchstart', handleTouch, { passive: true });
 
         loop();
     </script>
