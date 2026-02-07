@@ -2,50 +2,49 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firework 3D Orbit - smallbrandings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Firework Mobile - smallbrandings</title>
     <link href="https://fonts.googleapis.com/css2?family=Aboreto&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Aboreto', cursive; cursor: crosshair; color: #fff; user-select: none; }
-        canvas { display: block; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Aboreto', cursive; color: #fff; touch-action: none; user-select: none; }
+        canvas { display: block; touch-action: none; }
         
-        /* 이전 UI 스타일 유지 */
-        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; transition: opacity 1s; }
-        #intro-layer h1 { font-size: 60px; letter-spacing: 12px; margin: 0; animation: pulse 2.5s infinite; }
-        #intro-layer p { font-size: 14px; margin-top: 20px; opacity: 0.5; }
+        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; transition: opacity 0.8s; }
+        #intro-layer h1 { font-size: 8vw; letter-spacing: 10px; margin: 0; animation: pulse 2s infinite; }
+        #intro-layer p { font-size: 12px; margin-top: 15px; opacity: 0.5; font-family: sans-serif; }
         @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 
-        .top-right-ui { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 101; opacity: 0; transition: opacity 1s; pointer-events: none; }
+        .top-right-ui { position: fixed; top: 15px; right: 15px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 101; opacity: 0; transition: opacity 0.5s; pointer-events: none; }
         .top-right-ui.visible { opacity: 1; pointer-events: auto; }
-        .control-panel { background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 8px; }
-        .control-group { display: flex; flex-direction: column; align-items: flex-end; }
+        .control-panel { background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .control-group { display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 5px; }
         .control-group label { font-size: 8px; margin-bottom: 2px; opacity: 0.6; }
-        input[type="range"] { width: 100px; cursor: pointer; accent-color: #fff; }
+        input[type="range"] { width: 80px; accent-color: #fff; }
         
-        .view-info { position: fixed; bottom: 20px; left: 20px; font-size: 10px; opacity: 0.4; pointer-events: none; }
+        .guide-text { position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 9px; opacity: 0.3; letter-spacing: 1px; pointer-events: none; }
     </style>
 </head>
 <body>
 
 <div id="intro-layer">
     <h1>FIREWORK 3D</h1>
-    <p>드래그하여 공간을 회전하고, 클릭하여 폭죽을 쏘세요.</p>
+    <p>TAP TO START</p>
 </div>
 
 <div class="top-right-ui" id="right-ui">
     <div class="control-panel">
         <div class="control-group">
             <label>SIZE</label>
-            <input type="range" id="size-slider" min="2" max="20" value="10">
+            <input type="range" id="size-slider" min="2" max="20" value="8">
         </div>
         <div class="control-group">
             <label>DENSITY</label>
-            <input type="range" id="density-slider" min="10" max="100" value="40">
+            <input type="range" id="density-slider" min="5" max="50" value="25">
         </div>
     </div>
 </div>
 
-<div class="view-info">DRAG TO ROTATE VIEW</div>
+<div class="guide-text">DRAG TO ROTATE / TAP TO FIRE</div>
 <canvas id="canvas"></canvas>
 
 <script>
@@ -57,69 +56,78 @@
     const densitySlider = document.getElementById('density-slider');
 
     let particles = [];
-    let angleX = 0, angleY = 0; // 카메라 회전 각도
+    let angleX = 0, angleY = 0;
+    let targetAngleX = 0, targetAngleY = 0;
     let isDragging = false;
-    let lastMouseX, lastMouseY;
+    let startX, startY;
+    let hasMoved = false;
 
-    // 초기 설정
+    const dpr = window.devicePixelRatio || 1;
+
     function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        ctx.scale(dpr, dpr);
     }
     window.addEventListener('resize', resize);
     resize();
 
-    intro.addEventListener('click', () => {
+    // 시작 화면 터치
+    intro.addEventListener('touchstart', (e) => {
         intro.style.opacity = '0';
-        setTimeout(() => { intro.style.display = 'none'; rightUi.classList.add('visible'); }, 1000);
+        setTimeout(() => { intro.style.display = 'none'; rightUi.classList.add('visible'); }, 800);
     });
 
-    // 드래그 로직 (시점 변경)
-    window.addEventListener('mousedown', (e) => {
-        if(e.target.closest('.top-right-ui')) return;
+    // 터치 이벤트 제어
+    window.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.top-right-ui')) return;
         isDragging = true;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
-    });
+        hasMoved = false;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    }, { passive: false });
 
-    window.addEventListener('mousemove', (e) => {
+    window.addEventListener('touchmove', (e) => {
         if (!isDragging) return;
-        let dx = e.clientX - lastMouseX;
-        let dy = e.clientY - lastMouseY;
+        let dx = e.touches[0].clientX - startX;
+        let dy = e.touches[0].clientY - startY;
         
-        angleY += dx * 0.01; // 좌우 회전
-        angleX += dy * 0.01; // 상하 회전
-        
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
-    });
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) hasMoved = true;
 
-    window.addEventListener('mouseup', () => isDragging = false);
+        targetAngleY += dx * 0.005;
+        targetAngleX += dy * 0.005;
 
-    // 클릭 시 폭죽 발사 (중앙 기준 3D 공간에 생성)
-    window.addEventListener('click', (e) => {
-        if (e.target.closest('.top-right-ui') || intro.style.display !== 'none' || Math.abs(lastMouseX - e.clientX) > 5) return;
-        createExplosion(e.clientX - canvas.width/2, e.clientY - canvas.height/2);
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        e.preventDefault(); // 스크롤 방지
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+        if (!hasMoved && !e.target.closest('.top-right-ui') && intro.style.display === 'none') {
+            // 탭했을 때 (이동이 거의 없을 때) 폭죽 생성
+            const touch = e.changedTouches[0];
+            createExplosion(touch.clientX - window.innerWidth/2, touch.clientY - window.innerHeight/2);
+        }
+        isDragging = false;
     });
 
     class Particle {
         constructor(x, y, z, color) {
-            this.x = x; this.y = y; this.z = z; // 3D 좌표
-            const speed = Math.random() * 8 + 1;
+            this.x = x; this.y = y; this.z = z;
+            const speed = Math.random() * 6 + 1;
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.random() * Math.PI;
 
-            // 구형(Spherical) 폭발 좌표 계산
             this.vx = Math.sin(phi) * Math.cos(theta) * speed;
             this.vy = Math.sin(phi) * Math.sin(theta) * speed;
             this.vz = Math.cos(phi) * speed;
 
-            this.friction = 0.95;
-            this.gravity = 0.15;
+            this.friction = 0.94;
+            this.gravity = 0.12;
             this.alpha = 1;
-            this.decay = Math.random() * 0.015 + 0.005;
-            this.color = color;
-            this.size = (sizeSlider.value / 10) * (Math.random() * 1.2 + 0.5);
+            this.decay = Math.random() * 0.02 + 0.01;
+            this.hue = color;
+            this.sizeBase = (sizeSlider.value / 10);
         }
 
         update() {
@@ -130,24 +138,25 @@
         }
 
         draw() {
-            // 3D 회전 변환 (Y축 회전)
+            // 보간법을 이용한 부드러운 회전
+            angleX += (targetAngleX - angleX) * 0.1;
+            angleY += (targetAngleY - angleY) * 0.1;
+
+            // 회전 행렬
             let x1 = this.x * Math.cos(angleY) + this.z * Math.sin(angleY);
             let z1 = this.z * Math.cos(angleY) - this.x * Math.sin(angleY);
-            
-            // 3D 회전 변환 (X축 회전)
             let y2 = this.y * Math.cos(angleX) - z1 * Math.sin(angleX);
             let z2 = z1 * Math.cos(angleX) + this.y * Math.sin(angleX);
 
-            // 원근법 적용 (Perspective)
-            const fov = 600; 
+            const fov = 400; 
             const scale = fov / (fov + z2);
-            const px = x1 * scale + canvas.width / 2;
-            const py = y2 * scale + canvas.height / 2;
+            const px = x1 * scale + window.innerWidth / 2;
+            const py = y2 * scale + window.innerHeight / 2;
 
-            if (this.alpha > 0) {
-                ctx.fillStyle = `hsla(${this.color}, 100%, 70%, ${this.alpha})`;
+            if (this.alpha > 0 && z2 > -fov) {
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha})`;
                 ctx.beginPath();
-                ctx.arc(px, py, this.size * scale, 0, Math.PI * 2);
+                ctx.arc(px, py, this.sizeBase * scale * 1.5, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -155,7 +164,7 @@
 
     function createExplosion(x, y) {
         const color = Math.random() * 360;
-        const count = densitySlider.value * 15;
+        const count = densitySlider.value * 8;
         for (let i = 0; i < count; i++) {
             particles.push(new Particle(x, y, 0, color));
         }
@@ -163,8 +172,8 @@
 
     function loop() {
         ctx.globalCompositeOperation = 'destination-out';
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
         ctx.globalCompositeOperation = 'lighter';
 
         for (let i = particles.length - 1; i >= 0; i--) {
