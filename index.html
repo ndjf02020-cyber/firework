@@ -2,188 +2,180 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Firework - smallbrandings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firework 3D Orbit - smallbrandings</title>
     <link href="https://fonts.googleapis.com/css2?family=Aboreto&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Aboreto', cursive; cursor: crosshair; color: #fff; touch-action: none; }
-        canvas { display: block; touch-action: none; }
-        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; transition: opacity 1s; }
-        #intro-layer h1 { font-size: 10vw; font-weight: 400; letter-spacing: 5px; margin: 0; animation: pulse 2.5s infinite; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Aboreto', cursive; cursor: crosshair; color: #fff; user-select: none; }
+        canvas { display: block; }
+        
+        /* 이전 UI 스타일 유지 */
+        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; transition: opacity 1s; }
+        #intro-layer h1 { font-size: 60px; letter-spacing: 12px; margin: 0; animation: pulse 2.5s infinite; }
+        #intro-layer p { font-size: 14px; margin-top: 20px; opacity: 0.5; }
         @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-        .ui-container { position: fixed; top: 10px; left: 10px; background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 8px; z-index: 100; opacity: 0; transition: opacity 1s; pointer-events: none; }
-        .ui-container.visible { opacity: 1; pointer-events: auto; }
-        .bg-control { position: fixed; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); z-index: 101; opacity: 0; transition: opacity 1s; }
-        .bg-control.visible { opacity: 1; }
-        .bg-control label { display: block; font-size: 9px; margin-bottom: 3px; text-align: right; opacity: 0.7; }
-        #bg-slider { width: 70px; cursor: pointer; }
-        .controls { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; max-width: 140px; }
-        select { padding: 3px; border-radius: 4px; background: #111; color: #fff; border: 1px solid #444; font-size: 10px; outline: none; }
-        .random-mode { font-size: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; }
-        .footer { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); font-size: 8px; letter-spacing: 1px; opacity: 0.3; z-index: 50; pointer-events: none; text-transform: uppercase; white-space: nowrap; }
+
+        .top-right-ui { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 101; opacity: 0; transition: opacity 1s; pointer-events: none; }
+        .top-right-ui.visible { opacity: 1; pointer-events: auto; }
+        .control-panel { background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 8px; }
+        .control-group { display: flex; flex-direction: column; align-items: flex-end; }
+        .control-group label { font-size: 8px; margin-bottom: 2px; opacity: 0.6; }
+        input[type="range"] { width: 100px; cursor: pointer; accent-color: #fff; }
+        
+        .view-info { position: fixed; bottom: 20px; left: 20px; font-size: 10px; opacity: 0.4; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <div id="intro-layer"><h1>FIREWORK</h1></div>
-    <div class="ui-container" id="main-ui">
-        <div class="controls">
-            <select class="color-picker" id="c1"></select>
-            <select class="color-picker" id="c2"></select>
-            <select class="color-picker" id="c3"></select>
-            <label class="random-mode"><input type="checkbox" id="random-check"> RANDOM</label>
+<div id="intro-layer">
+    <h1>FIREWORK 3D</h1>
+    <p>드래그하여 공간을 회전하고, 클릭하여 폭죽을 쏘세요.</p>
+</div>
+
+<div class="top-right-ui" id="right-ui">
+    <div class="control-panel">
+        <div class="control-group">
+            <label>SIZE</label>
+            <input type="range" id="size-slider" min="2" max="20" value="10">
+        </div>
+        <div class="control-group">
+            <label>DENSITY</label>
+            <input type="range" id="density-slider" min="10" max="100" value="40">
         </div>
     </div>
-    <div class="bg-control" id="bg-ui">
-        <label>SKY HUE</label>
-        <input type="range" id="bg-slider" min="0" max="40" value="0">
-    </div>
-    <div class="footer">made by smallbrandings</div>
-    <canvas id="canvas"></canvas>
+</div>
 
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const intro = document.getElementById('intro-layer');
-        const uiElements = [document.getElementById('main-ui'), document.getElementById('bg-ui')];
-        const randomCheck = document.getElementById('random-check');
-        const bgSlider = document.getElementById('bg-slider');
+<div class="view-info">DRAG TO ROTATE VIEW</div>
+<canvas id="canvas"></canvas>
 
-        const dpr = window.devicePixelRatio || 1;
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const intro = document.getElementById('intro-layer');
+    const rightUi = document.getElementById('right-ui');
+    const sizeSlider = document.getElementById('size-slider');
+    const densitySlider = document.getElementById('density-slider');
 
-        const colorPalette = [
-            { name: "GOLD", hue: 45, sat: 100 }, { name: "RED", hue: 0, sat: 100 },
-            { name: "PINK", hue: 330, sat: 100 }, { name: "PURPLE", hue: 270, sat: 80 },
-            { name: "BLUE", hue: 210, sat: 100 }, { name: "EMERALD", hue: 150, sat: 100 },
-            { name: "WHITE", hue: 0, sat: 0 }, { name: "ORANGE", hue: 30, sat: 100 },
-            { name: "LIME", hue: 90, sat: 100 }
-        ];
+    let particles = [];
+    let angleX = 0, angleY = 0; // 카메라 회전 각도
+    let isDragging = false;
+    let lastMouseX, lastMouseY;
 
-        intro.addEventListener('click', () => {
-            intro.style.opacity = '0';
-            setTimeout(() => { intro.style.display = 'none'; uiElements.forEach(el => el.classList.add('visible')); }, 1000);
-        });
+    // 초기 설정
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
 
-        bgSlider.addEventListener('input', (e) => { document.body.style.backgroundColor = `rgb(0, ${e.target.value/2}, ${e.target.value})`; });
+    intro.addEventListener('click', () => {
+        intro.style.opacity = '0';
+        setTimeout(() => { intro.style.display = 'none'; rightUi.classList.add('visible'); }, 1000);
+    });
 
-        const selects = document.querySelectorAll('.color-picker');
-        selects.forEach((s, idx) => {
-            colorPalette.forEach((c, i) => {
-                const opt = document.createElement('option');
-                opt.value = i; opt.textContent = c.name;
-                if(idx === 0 && c.name === "GOLD") opt.selected = true;
-                if(idx === 1 && c.name === "RED") opt.selected = true;
-                if(idx === 2 && c.name === "WHITE") opt.selected = true;
-                s.appendChild(opt);
-            });
-        });
+    // 드래그 로직 (시점 변경)
+    window.addEventListener('mousedown', (e) => {
+        if(e.target.closest('.top-right-ui')) return;
+        isDragging = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+    });
 
-        function getColors() {
-            if (randomCheck.checked) return [1, 2, 3].map(() => colorPalette[Math.floor(Math.random() * colorPalette.length)]);
-            return Array.from(selects).map(s => colorPalette[s.value]);
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        let dx = e.clientX - lastMouseX;
+        let dy = e.clientY - lastMouseY;
+        
+        angleY += dx * 0.01; // 좌우 회전
+        angleX += dy * 0.01; // 상하 회전
+        
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => isDragging = false);
+
+    // 클릭 시 폭죽 발사 (중앙 기준 3D 공간에 생성)
+    window.addEventListener('click', (e) => {
+        if (e.target.closest('.top-right-ui') || intro.style.display !== 'none' || Math.abs(lastMouseX - e.clientX) > 5) return;
+        createExplosion(e.clientX - canvas.width/2, e.clientY - canvas.height/2);
+    });
+
+    class Particle {
+        constructor(x, y, z, color) {
+            this.x = x; this.y = y; this.z = z; // 3D 좌표
+            const speed = Math.random() * 8 + 1;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI;
+
+            // 구형(Spherical) 폭발 좌표 계산
+            this.vx = Math.sin(phi) * Math.cos(theta) * speed;
+            this.vy = Math.sin(phi) * Math.sin(theta) * speed;
+            this.vz = Math.cos(phi) * speed;
+
+            this.friction = 0.95;
+            this.gravity = 0.15;
+            this.alpha = 1;
+            this.decay = Math.random() * 0.015 + 0.005;
+            this.color = color;
+            this.size = (sizeSlider.value / 10) * (Math.random() * 1.2 + 0.5);
         }
 
-        function resize() {
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-            canvas.style.width = window.innerWidth + 'px';
-            canvas.style.height = window.innerHeight + 'px';
-            ctx.scale(dpr, dpr);
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
-        let fireworks = [];
-        let particles = [];
-
-        class Firework {
-            constructor(sx, sy, tx, ty, colorSet) {
-                this.x = sx; this.y = sy; this.tx = tx; this.ty = ty;
-                this.colorSet = colorSet;
-                this.vy = -5.5;
-            }
-            update() { this.y += this.vy; return (this.y <= this.ty); }
-            draw() {
-                ctx.fillStyle = "rgba(255, 255, 240, 1)";
-                ctx.beginPath(); ctx.arc(this.x, this.y, 1.2, 0, Math.PI * 2); ctx.fill();
-            }
+        update() {
+            this.vx *= this.friction; this.vy *= this.friction; this.vz *= this.friction;
+            this.vy += this.gravity;
+            this.x += this.vx; this.y += this.vy; this.z += this.vz;
+            this.alpha -= this.decay;
         }
 
-        class Particle {
-            constructor(x, y, color, zScale) {
-                this.x = x; this.y = y;
-                const angle = Math.random() * Math.PI * 2;
-                const force = Math.random() * (9 * zScale) + 0.2;
-                this.vx = Math.cos(angle) * force;
-                this.vy = Math.sin(angle) * force;
-                this.friction = 0.9 + (Math.random() * 0.06); 
-                this.gravity = (0.015 + Math.random() * 0.02) * zScale; 
-                this.alpha = 1;
-                this.decay = (Math.random() * 0.003 + 0.004) / zScale; 
-                const lightness = color.name === "WHITE" ? 95 : 50 + (Math.random() * 20);
-                this.baseColor = `hsla(${color.hue}, ${color.sat}%, ${lightness}%, `;
-                this.size = (Math.random() * 0.4 + 0.1) * zScale; 
-            }
-            update() {
-                this.vx *= this.friction; this.vy *= this.friction; this.vy += this.gravity;
-                this.x += this.vx; this.y += this.vy;
-                this.alpha -= this.decay;
-                return (this.alpha <= 0);
-            }
-            draw() {
-                let currentAlpha = this.alpha;
-                if (this.alpha < 0.6 && Math.random() > 0.8) { currentAlpha = 1; }
-                ctx.fillStyle = this.baseColor + currentAlpha + ")";
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+        draw() {
+            // 3D 회전 변환 (Y축 회전)
+            let x1 = this.x * Math.cos(angleY) + this.z * Math.sin(angleY);
+            let z1 = this.z * Math.cos(angleY) - this.x * Math.sin(angleY);
+            
+            // 3D 회전 변환 (X축 회전)
+            let y2 = this.y * Math.cos(angleX) - z1 * Math.sin(angleX);
+            let z2 = z1 * Math.cos(angleX) + this.y * Math.sin(angleX);
+
+            // 원근법 적용 (Perspective)
+            const fov = 600; 
+            const scale = fov / (fov + z2);
+            const px = x1 * scale + canvas.width / 2;
+            const py = y2 * scale + canvas.height / 2;
+
+            if (this.alpha > 0) {
+                ctx.fillStyle = `hsla(${this.color}, 100%, 70%, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(px, py, this.size * scale, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
+    }
 
-        function createParticles(x, y, colorSet) {
-            const zScale = Math.random() * 0.8 + 0.5;
-            let count = Math.floor((window.innerWidth < 600 ? 2400 : 5000) * zScale);
-            if (particles.length > 40000) count *= 0.3; 
-            for (let i = 0; i < count; i++) {
-                particles.push(new Particle(x, y, colorSet[Math.floor(Math.random() * colorSet.length)], zScale));
-            }
+    function createExplosion(x, y) {
+        const color = Math.random() * 360;
+        const count = densitySlider.value * 15;
+        for (let i = 0; i < count; i++) {
+            particles.push(new Particle(x, y, 0, color));
         }
+    }
 
-        function loop() {
-            requestAnimationFrame(loop);
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.22)'; 
-            ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
-            ctx.globalCompositeOperation = 'lighter';
-            for (let i = fireworks.length - 1; i >= 0; i--) {
-                const f = fireworks[i];
-                if (f.update()) { createParticles(f.tx, f.ty, f.colorSet); fireworks.splice(i, 1); } 
-                else { f.draw(); }
-            }
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                if (p.update()) { particles.splice(i, 1); } 
-                else { p.draw(); }
-            }
+    function loop() {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = 'lighter';
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            particles[i].draw();
+            if (particles[i].alpha <= 0) particles.splice(i, 1);
         }
+        requestAnimationFrame(loop);
+    }
 
-        // 멀티터치 대응 핸들러
-        function handleTouch(e) {
-            if (e.target.closest('.ui-container') || e.target.closest('.bg-control') || intro.style.display !== 'none') return;
-            // 발생한 모든 터치 포인트에 대해 폭죽 생성
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                fireworks.push(new Firework(touch.clientX, window.innerHeight, touch.clientX, touch.clientY, getColors()));
-            }
-        }
-
-        function handleMouse(e) {
-            if (e.target.closest('.ui-container') || e.target.closest('.bg-control') || intro.style.display !== 'none') return;
-            fireworks.push(new Firework(e.clientX, window.innerHeight, e.clientX, e.clientY, getColors()));
-        }
-
-        window.addEventListener('mousedown', handleMouse);
-        window.addEventListener('touchstart', handleTouch, { passive: true });
-
-        loop();
-    </script>
+    loop();
+</script>
 </body>
 </html>
