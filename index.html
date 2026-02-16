@@ -3,188 +3,357 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Firework Mobile - smallbrandings</title>
+    <title>Firework - smallbrandings</title>
     <link href="https://fonts.googleapis.com/css2?family=Aboreto&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Aboreto', cursive; color: #fff; touch-action: none; user-select: none; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Aboreto', cursive; cursor: crosshair; color: #fff; touch-action: none; }
         canvas { display: block; touch-action: none; }
-        
-        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; transition: opacity 0.8s; }
-        #intro-layer h1 { font-size: 8vw; letter-spacing: 10px; margin: 0; animation: pulse 2s infinite; }
-        #intro-layer p { font-size: 12px; margin-top: 15px; opacity: 0.5; font-family: sans-serif; }
+        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; transition: opacity 1s; }
+        #intro-layer h1 { font-size: 10vw; font-weight: 400; letter-spacing: 5px; margin: 0; animation: pulse 2.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-
-        .top-right-ui { position: fixed; top: 15px; right: 15px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 101; opacity: 0; transition: opacity 0.5s; pointer-events: none; }
-        .top-right-ui.visible { opacity: 1; pointer-events: auto; }
-        .control-panel { background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .control-group { display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 5px; }
-        .control-group label { font-size: 8px; margin-bottom: 2px; opacity: 0.6; }
-        input[type="range"] { width: 80px; accent-color: #fff; }
-        
-        .guide-text { position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 9px; opacity: 0.3; letter-spacing: 1px; pointer-events: none; }
+        .ui-container { position: fixed; top: 10px; left: 10px; background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 8px; z-index: 100; opacity: 0; transition: opacity 1s; pointer-events: none; }
+        .ui-container.visible { opacity: 1; pointer-events: auto; }
+        .bg-control { position: fixed; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); z-index: 101; opacity: 0; transition: opacity 1s; }
+        .bg-control.visible { opacity: 1; }
+        .bg-control label { display: block; font-size: 9px; margin-bottom: 3px; text-align: right; opacity: 0.7; }
+        #bg-slider { width: 70px; cursor: pointer; }
+        .controls { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; max-width: 140px; }
+        select { padding: 3px; border-radius: 4px; background: #111; color: #fff; border: 1px solid #444; font-size: 10px; outline: none; }
+        .random-mode { font-size: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; }
+        .footer { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); font-size: 8px; letter-spacing: 1px; opacity: 0.3; z-index: 50; pointer-events: none; text-transform: uppercase; white-space: nowrap; }
     </style>
 </head>
 <body>
 
-<div id="intro-layer">
-    <h1>FIREWORK 3D</h1>
-    <p>TAP TO START</p>
-</div>
-
-<div class="top-right-ui" id="right-ui">
-    <div class="control-panel">
-        <div class="control-group">
-            <label>SIZE</label>
-            <input type="range" id="size-slider" min="2" max="20" value="8">
-        </div>
-        <div class="control-group">
-            <label>DENSITY</label>
-            <input type="range" id="density-slider" min="5" max="50" value="25">
+    <div id="intro-layer"><h1>FIREWORK</h1></div>
+    <div class="ui-container" id="main-ui">
+        <div class="controls">
+            <select class="color-picker" id="c1"></select>
+            <select class="color-picker" id="c2"></select>
+            <select class="color-picker" id="c3"></select>
+            <label class="random-mode"><input type="checkbox" id="random-check"> RANDOM</label>
         </div>
     </div>
-</div>
+    <div class="bg-control" id="bg-ui">
+        <label>SKY HUE</label>
+        <input type="range" id="bg-slider" min="0" max="40" value="0">
+    </div>
+    <div class="footer">made by smallbrandings</div>
+    <canvas id="canvas"></canvas>
 
-<div class="guide-text">DRAG TO ROTATE / TAP TO FIRE</div>
-<canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+        const intro = document.getElementById('intro-layer');
+        const uiElements = [document.getElementById('main-ui'), document.getElementById('bg-ui')];
+        const randomCheck = document.getElementById('random-check');
+        const bgSlider = document.getElementById('bg-slider');
 
-<script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const intro = document.getElementById('intro-layer');
-    const rightUi = document.getElementById('right-ui');
-    const sizeSlider = document.getElementById('size-slider');
-    const densitySlider = document.getElementById('density-slider');
+        // 해상도(=DPR) 제한으로 과도한 픽셀 렌더링 방지 (특히 모바일/레티나에서 렉 크게 줄어듦)
+        let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
-    let particles = [];
-    let angleX = 0, angleY = 0;
-    let targetAngleX = 0, targetAngleY = 0;
-    let isDragging = false;
-    let startX, startY;
-    let hasMoved = false;
+        // 매 프레임 window.innerWidth/Height 접근 줄이기
+        let w = 0, h = 0;
 
-    const dpr = window.devicePixelRatio || 1;
+        // 팔레트
+        const colorPalette = [
+            { name: "GOLD", hue: 45, sat: 100 }, { name: "RED", hue: 0, sat: 100 },
+            { name: "PINK", hue: 330, sat: 100 }, { name: "PURPLE", hue: 270, sat: 80 },
+            { name: "BLUE", hue: 210, sat: 100 }, { name: "EMERALD", hue: 150, sat: 100 },
+            { name: "WHITE", hue: 0, sat: 0 }, { name: "ORANGE", hue: 30, sat: 100 },
+            { name: "LIME", hue: 90, sat: 100 }
+        ];
 
-    function resize() {
-        canvas.width = window.innerWidth * dpr;
-        canvas.height = window.innerHeight * dpr;
-        ctx.scale(dpr, dpr);
-    }
-    window.addEventListener('resize', resize);
-    resize();
+        // 색상 문자열을 미리 만들어(양자화) 파티클 생성 시 문자열/GC 폭탄 방지
+        const LIGHT_STEPS = [50, 55, 60, 65, 70];
+        const WHITE_STEPS = [92, 95, 98];
+        colorPalette.forEach(c => {
+            const steps = (c.name === "WHITE") ? WHITE_STEPS : LIGHT_STEPS;
+            c.styles = steps.map(l => `hsl(${c.hue}, ${c.sat}%, ${l}%)`);
+        });
 
-    // 시작 화면 터치
-    intro.addEventListener('touchstart', (e) => {
-        intro.style.opacity = '0';
-        setTimeout(() => { intro.style.display = 'none'; rightUi.classList.add('visible'); }, 800);
-    });
+        intro.addEventListener('click', () => {
+            intro.style.opacity = '0';
+            setTimeout(() => { intro.style.display = 'none'; uiElements.forEach(el => el.classList.add('visible')); }, 1000);
+        });
 
-    // 터치 이벤트 제어
-    window.addEventListener('touchstart', (e) => {
-        if (e.target.closest('.top-right-ui')) return;
-        isDragging = true;
-        hasMoved = false;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-    }, { passive: false });
+        bgSlider.addEventListener('input', (e) => {
+            document.body.style.backgroundColor = `rgb(0, ${e.target.value / 2}, ${e.target.value})`;
+        });
 
-    window.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
-        let dx = e.touches[0].clientX - startX;
-        let dy = e.touches[0].clientY - startY;
-        
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) hasMoved = true;
+        const selects = document.querySelectorAll('.color-picker');
+        selects.forEach((s, idx) => {
+            colorPalette.forEach((c, i) => {
+                const opt = document.createElement('option');
+                opt.value = i; opt.textContent = c.name;
+                if (idx === 0 && c.name === "GOLD") opt.selected = true;
+                if (idx === 1 && c.name === "RED") opt.selected = true;
+                if (idx === 2 && c.name === "WHITE") opt.selected = true;
+                s.appendChild(opt);
+            });
+        });
 
-        targetAngleY += dx * 0.005;
-        targetAngleX += dy * 0.005;
-
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        e.preventDefault(); // 스크롤 방지
-    }, { passive: false });
-
-    window.addEventListener('touchend', (e) => {
-        if (!hasMoved && !e.target.closest('.top-right-ui') && intro.style.display === 'none') {
-            // 탭했을 때 (이동이 거의 없을 때) 폭죽 생성
-            const touch = e.changedTouches[0];
-            createExplosion(touch.clientX - window.innerWidth/2, touch.clientY - window.innerHeight/2);
-        }
-        isDragging = false;
-    });
-
-    class Particle {
-        constructor(x, y, z, color) {
-            this.x = x; this.y = y; this.z = z;
-            const speed = Math.random() * 6 + 1;
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.random() * Math.PI;
-
-            this.vx = Math.sin(phi) * Math.cos(theta) * speed;
-            this.vy = Math.sin(phi) * Math.sin(theta) * speed;
-            this.vz = Math.cos(phi) * speed;
-
-            this.friction = 0.94;
-            this.gravity = 0.12;
-            this.alpha = 1;
-            this.decay = Math.random() * 0.02 + 0.01;
-            this.hue = color;
-            this.sizeBase = (sizeSlider.value / 10);
+        function getColors() {
+            if (randomCheck.checked) return [1, 2, 3].map(() => colorPalette[(Math.random() * colorPalette.length) | 0]);
+            return Array.from(selects).map(s => colorPalette[s.value]);
         }
 
-        update() {
-            this.vx *= this.friction; this.vy *= this.friction; this.vz *= this.friction;
-            this.vy += this.gravity;
-            this.x += this.vx; this.y += this.vy; this.z += this.vz;
-            this.alpha -= this.decay;
+        function resize() {
+            w = window.innerWidth;
+            h = window.innerHeight;
+            dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+
+            canvas.width = Math.floor(w * dpr);
+            canvas.height = Math.floor(h * dpr);
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+
+            // resize 때 scale 누적되는 문제 방지
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', resize, { passive: true });
+        resize();
+
+        // ---- 성능 관리 ----
+        const PERF = {
+            lastNow: performance.now(),
+            fps: 60,
+            quality: 1,        // 0.35 ~ 1
+            decayBoost: 1,     // 파티클 과밀 시 더 빨리 사라지게
+            maxParticles: 32000,
+            maxFireworks: 60
+        };
+
+        // 방향 LUT로 sin/cos 폭발 스파이크 제거
+        const TAU = Math.PI * 2;
+        const DIR_LUT_SIZE = 1024;
+        const dirX = new Float32Array(DIR_LUT_SIZE);
+        const dirY = new Float32Array(DIR_LUT_SIZE);
+        for (let i = 0; i < DIR_LUT_SIZE; i++) {
+            const a = (i / DIR_LUT_SIZE) * TAU;
+            dirX[i] = Math.cos(a);
+            dirY[i] = Math.sin(a);
         }
 
-        draw() {
-            // 보간법을 이용한 부드러운 회전
-            angleX += (targetAngleX - angleX) * 0.1;
-            angleY += (targetAngleY - angleY) * 0.1;
+        const fireworks = [];
+        const particles = [];
+        const particlePool = [];
+        let lastFill = '';
 
-            // 회전 행렬
-            let x1 = this.x * Math.cos(angleY) + this.z * Math.sin(angleY);
-            let z1 = this.z * Math.cos(angleY) - this.x * Math.sin(angleY);
-            let y2 = this.y * Math.cos(angleX) - z1 * Math.sin(angleX);
-            let z2 = z1 * Math.cos(angleX) + this.y * Math.sin(angleX);
-
-            const fov = 400; 
-            const scale = fov / (fov + z2);
-            const px = x1 * scale + window.innerWidth / 2;
-            const py = y2 * scale + window.innerHeight / 2;
-
-            if (this.alpha > 0 && z2 > -fov) {
-                ctx.fillStyle = `hsla(${this.hue}, 100%, 75%, ${this.alpha})`;
+        class Firework {
+            constructor(sx, sy, tx, ty, colorSet) {
+                this.x = sx; this.y = sy; this.tx = tx; this.ty = ty;
+                this.colorSet = colorSet;
+                this.vy = -5.5;
+            }
+            update() {
+                this.y += this.vy;
+                return (this.y <= this.ty);
+            }
+            draw() {
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = "rgba(255, 255, 240, 1)";
                 ctx.beginPath();
-                ctx.arc(px, py, this.sizeBase * scale * 1.5, 0, Math.PI * 2);
+                ctx.arc(this.x, this.y, 1.2, 0, TAU);
                 ctx.fill();
             }
         }
-    }
 
-    function createExplosion(x, y) {
-        const color = Math.random() * 360;
-        const count = densitySlider.value * 8;
-        for (let i = 0; i < count; i++) {
-            particles.push(new Particle(x, y, 0, color));
+        class Particle {
+            constructor() {
+                this.x = 0; this.y = 0;
+                this.vx = 0; this.vy = 0;
+                this.friction = 0.92;
+                this.gravity = 0.02;
+                this.alpha = 1;
+                this.decay = 0.006;
+                this.color = "hsl(0, 0%, 100%)";
+                this.size = 1;
+            }
+
+            reset(x, y, color, zScale) {
+                this.x = x; this.y = y;
+
+                const idx = (Math.random() * DIR_LUT_SIZE) | 0;
+                const force = Math.random() * (9 * zScale) + 0.2;
+                this.vx = dirX[idx] * force;
+                this.vy = dirY[idx] * force;
+
+                this.friction = 0.9 + (Math.random() * 0.06);
+                this.gravity = (0.015 + Math.random() * 0.02) * zScale;
+
+                this.alpha = 1;
+                this.decay = (Math.random() * 0.003 + 0.004) / zScale;
+
+                // 문자열 생성 대신 미리 만들어둔 스타일 중 랜덤 선택
+                const styles = color.styles;
+                this.color = styles[(Math.random() * styles.length) | 0];
+
+                this.size = (Math.random() * 0.4 + 0.1) * zScale;
+            }
+
+            update() {
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+                this.vy += this.gravity;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // 과밀 시 더 빨리 사라지게 해서 누적 방지
+                this.alpha -= this.decay * PERF.decayBoost;
+                return (this.alpha <= 0);
+            }
+
+            draw() {
+                // 부하가 큰 상황에서는 깜빡임(랜덤) 비용 줄이기
+                let a = this.alpha;
+                if (a < 0.6 && particles.length < PERF.maxParticles * 0.85) {
+                    if (Math.random() > 0.82) a = 1;
+                }
+
+                // fillStyle 변경을 최소화 (동일 문자열이면 재설정 안 함)
+                if (lastFill !== this.color) {
+                    ctx.fillStyle = this.color;
+                    lastFill = this.color;
+                }
+
+                ctx.globalAlpha = a;
+
+                const r = this.size;
+                if (r <= 1.1) {
+                    const d = r * 2;
+                    ctx.fillRect(this.x - r, this.y - r, d, d);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, r, 0, TAU);
+                    ctx.fill();
+                }
+            }
         }
-    }
 
-    function loop() {
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-        ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
-        ctx.globalCompositeOperation = 'lighter';
+        function createParticles(x, y, colorSet) {
+            const zScale = Math.random() * 0.8 + 0.5;
 
-        for (let i = particles.length - 1; i >= 0; i--) {
-            particles[i].update();
-            particles[i].draw();
-            if (particles[i].alpha <= 0) particles.splice(i, 1);
+            // 화면/기기별 기본 파티클 수(원본 값 유지)
+            const base = (w < 600 ? 2400 : 5000) * zScale;
+
+            const headroom = PERF.maxParticles - particles.length;
+            if (headroom <= 0) return;
+
+            // 폭죽을 한 번에 많이 쏘면 각 폭발당 파티클 수를 자동으로 줄여 "느낌"은 유지하되 렉은 잡음
+            const loadFactor = Math.max(0.15, headroom / PERF.maxParticles);
+            const fwFactor = 1 / (1 + fireworks.length * 0.055);
+            let count = Math.floor(base * loadFactor * fwFactor * PERF.quality);
+
+            const minBurst = Math.floor((w < 600 ? 320 : 520) * zScale);
+            const maxBurst = Math.floor((w < 600 ? 2600 : 5200) * zScale);
+            count = Math.max(minBurst, Math.min(count, maxBurst, headroom));
+
+            for (let i = 0; i < count; i++) {
+                const p = particlePool.length ? particlePool.pop() : new Particle();
+                p.reset(x, y, colorSet[(Math.random() * colorSet.length) | 0], zScale);
+                particles.push(p);
+            }
         }
+
+        function perfTick(now) {
+            const dt = now - PERF.lastNow;
+            PERF.lastNow = now;
+
+            const fpsNow = 1000 / Math.max(1, dt);
+            PERF.fps = PERF.fps * 0.9 + fpsNow * 0.1;
+
+            // 화면 크기에 따라 전체 파티클 상한 자동 조정
+            PERF.maxParticles = (w < 600 ? 18000 : 32000);
+
+            // fps가 떨어지면 다음 폭발부터 자동으로 품질(파티클 수) 낮춤
+            if (PERF.fps < 52) PERF.quality = Math.max(0.35, PERF.quality * 0.96);
+            else if (PERF.fps > 58) PERF.quality = Math.min(1, PERF.quality * 1.01);
+
+            // 과밀 시 decay를 올려서 "누적"을 빠르게 해소
+            const load = particles.length / PERF.maxParticles;
+            PERF.decayBoost = 1 + Math.max(0, load - 0.65) * 2.5;
+        }
+
+        function loop(now) {
+            requestAnimationFrame(loop);
+            perfTick(now);
+
+            // 잔상: 과밀할수록 조금 더 빨리 지워서 파티클 체류시간을 줄임
+            const load = particles.length / Math.max(1, PERF.maxParticles);
+            const fadeAlpha = 0.22 + Math.min(0.18, Math.max(0, load - 0.55) * 0.4);
+
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgb(0, 0, 0)';
+            ctx.globalAlpha = fadeAlpha;
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 1;
+
+            // fillStyle 캐시 초기화
+            lastFill = '';
+
+            // 폭죽(로켓)
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                const f = fireworks[i];
+                if (f.update()) {
+                    createParticles(f.tx, f.ty, f.colorSet);
+
+                    // splice 대신 swap+pop (O(1) 삭제)
+                    fireworks[i] = fireworks[fireworks.length - 1];
+                    fireworks.pop();
+                } else {
+                    f.draw();
+                }
+            }
+
+            // 파티클: 너무 많아지면 "그리기"만 절반 스킵해서 프레임 방어 (움직임은 유지)
+            const drawSkip = (particles.length > PERF.maxParticles * 0.9);
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+
+                if (p.update()) {
+                    // 풀에 반환(재사용)해서 GC 스파이크 제거
+                    if (particlePool.length < PERF.maxParticles) particlePool.push(p);
+
+                    // splice 대신 swap+pop (O(1) 삭제)
+                    particles[i] = particles[particles.length - 1];
+                    particles.pop();
+                } else {
+                    if (!drawSkip || ((i & 1) === 0)) p.draw();
+                }
+            }
+
+            ctx.globalAlpha = 1;
+        }
+
+        function addFirework(x, y) {
+            if (fireworks.length >= PERF.maxFireworks) return;
+            fireworks.push(new Firework(x, h, x, y, getColors()));
+        }
+
+        // 멀티터치 대응 핸들러
+        function handleTouch(e) {
+            if (e.target.closest('.ui-container') || e.target.closest('.bg-control') || intro.style.display !== 'none') return;
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                addFirework(touch.clientX, touch.clientY);
+            }
+        }
+
+        function handleMouse(e) {
+            if (e.target.closest('.ui-container') || e.target.closest('.bg-control') || intro.style.display !== 'none') return;
+            addFirework(e.clientX, e.clientY);
+        }
+
+        window.addEventListener('mousedown', handleMouse);
+        window.addEventListener('touchstart', handleTouch, { passive: true });
+
         requestAnimationFrame(loop);
-    }
-
-    loop();
-</script>
+    </script>
 </body>
 </html>
