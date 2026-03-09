@@ -1,359 +1,452 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Firework - smallbrandings</title>
-    <link href="https://fonts.googleapis.com/css2?family=Aboreto&display=swap" rel="stylesheet">
-    <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Aboreto', cursive; cursor: crosshair; color: #fff; touch-action: none; }
-        canvas { display: block; touch-action: none; }
-        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; transition: opacity 1s; }
-        #intro-layer h1 { font-size: 10vw; font-weight: 400; letter-spacing: 5px; margin: 0; animation: pulse 2.5s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-        .ui-container { position: fixed; top: 10px; left: 10px; background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 8px; z-index: 100; opacity: 0; transition: opacity 1s; pointer-events: none; }
-        .ui-container.visible { opacity: 1; pointer-events: auto; }
-        .bg-control { position: fixed; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.08); padding: 10px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); z-index: 101; opacity: 0; transition: opacity 1s; }
-        .bg-control.visible { opacity: 1; }
-        .bg-control label { display: block; font-size: 9px; margin-bottom: 3px; text-align: right; opacity: 0.7; }
-        #bg-slider { width: 70px; cursor: pointer; }
-        .controls { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; max-width: 140px; }
-        select { padding: 3px; border-radius: 4px; background: #111; color: #fff; border: 1px solid #444; font-size: 10px; outline: none; }
-        .random-mode { font-size: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; }
-        .footer { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); font-size: 8px; letter-spacing: 1px; opacity: 0.3; z-index: 50; pointer-events: none; text-transform: uppercase; white-space: nowrap; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>과제 투두리스트</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #222;
+      --muted: #6b7280;
+      --line: #dbe1ea;
+      --primary: #2563eb;
+      --doing: #f59e0b;
+      --done: #10b981;
+      --todo: #6366f1;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      color: var(--text);
+    }
+
+    .app {
+      max-width: 1050px;
+      margin: 24px auto;
+      padding: 0 16px 28px;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+      padding: 16px;
+    }
+
+    h1 { margin: 0 0 6px; font-size: 26px; }
+    h2 { margin: 0 0 12px; font-size: 18px; }
+    p { margin: 0; color: var(--muted); font-size: 13px; }
+
+    .stack { display: grid; gap: 10px; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    input, select, textarea, button {
+      font: inherit;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      padding: 10px;
+      width: 100%;
+      background: #fff;
+    }
+
+    textarea { min-height: 72px; resize: vertical; }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    button.sub {
+      background: #eef2ff;
+      color: #374151;
+      border: 1px solid #c7d2fe;
+    }
+
+    .quick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .stat strong { display: block; font-size: 20px; color: var(--text); margin-top: 2px; }
+
+    .progress {
+      margin-top: 10px;
+      height: 10px;
+      width: 100%;
+      border-radius: 999px;
+      background: #e7ecf3;
+      overflow: hidden;
+    }
+
+    .progress > div { height: 100%; background: linear-gradient(90deg, #34d399, #10b981); width: 0%; }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr 130px 120px 110px;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .list { display: grid; gap: 8px; }
+
+    .task {
+      border: 1px solid var(--line);
+      border-left-width: 6px;
+      border-radius: 10px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .task.todo { border-left-color: var(--todo); }
+    .task.doing { border-left-color: var(--doing); }
+    .task.done { border-left-color: var(--done); opacity: 0.78; }
+
+    .task-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .task-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.35;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .chip {
+      border-radius: 999px;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+    }
+
+    .chip.high { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+    .chip.mid { background: #fef3c7; border-color: #fde68a; color: #92400e; }
+    .chip.low { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+
+    .task-actions {
+      display: grid;
+      grid-template-columns: 130px 96px;
+      gap: 8px;
+      justify-content: end;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      padding: 24px 12px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      .task-actions { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
 </head>
 <body>
+  <main class="app">
+    <section class="card">
+      <h1>과제 투두리스트</h1>
+      <p>과목별/우선순위별로 정리하고, 진행률을 확인하며 과제를 체계적으로 관리하세요.</p>
 
-    <div id="intro-layer"><h1>FIREWORK</h1></div>
-    <div class="ui-container" id="main-ui">
-        <div class="controls">
-            <select class="color-picker" id="c1"></select>
-            <select class="color-picker" id="c2"></select>
-            <select class="color-picker" id="c3"></select>
-            <label class="random-mode"><input type="checkbox" id="random-check"> RANDOM</label>
+      <div class="stats">
+        <div class="stat">전체 <strong id="totalCount">0</strong></div>
+        <div class="stat">진행중 <strong id="doingCount">0</strong></div>
+        <div class="stat">완료 <strong id="doneCount">0</strong></div>
+      </div>
+      <div class="progress"><div id="progressBar"></div></div>
+      <p id="progressText" style="margin-top:6px;">완료율 0%</p>
+
+      <hr style="margin: 16px 0; border: 0; border-top: 1px solid var(--line);" />
+
+      <h2>새 과제 추가</h2>
+      <form id="taskForm" class="stack">
+        <div>
+          <label for="title">할 일</label>
+          <input id="title" required placeholder="예: 자료구조 과제 2 보고서 작성" />
         </div>
-    </div>
-    <div class="bg-control" id="bg-ui">
-        <label>SKY HUE</label>
-        <input type="range" id="bg-slider" min="0" max="40" value="0">
-    </div>
-    <div class="footer">made by smallbrandings</div>
-    <canvas id="canvas"></canvas>
+        <div class="quick">
+          <div>
+            <label for="subject">과목/프로젝트</label>
+            <input id="subject" required placeholder="예: 자료구조" />
+          </div>
+          <div>
+            <label for="dueDate">마감일</label>
+            <input id="dueDate" type="date" required />
+          </div>
+        </div>
+        <div class="quick">
+          <div>
+            <label for="priority">우선순위</label>
+            <select id="priority">
+              <option value="high">높음</option>
+              <option value="medium" selected>중간</option>
+              <option value="low">낮음</option>
+            </select>
+          </div>
+          <div>
+            <label for="status">상태</label>
+            <select id="status">
+              <option value="todo" selected>할 일</option>
+              <option value="doing">진행중</option>
+              <option value="done">완료</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label for="note">메모</label>
+          <textarea id="note" placeholder="필요한 참고자료, 세부 계획 등을 적어두세요."></textarea>
+        </div>
+        <button type="submit">과제 추가</button>
+      </form>
+    </section>
 
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
-        const intro = document.getElementById('intro-layer');
-        const uiElements = [document.getElementById('main-ui'), document.getElementById('bg-ui')];
-        const randomCheck = document.getElementById('random-check');
-        const bgSlider = document.getElementById('bg-slider');
+    <section class="card">
+      <h2>과제 목록</h2>
+      <div class="toolbar">
+        <input id="searchInput" placeholder="검색 (할 일/과목/메모)" />
+        <select id="filterStatus">
+          <option value="all">전체 상태</option>
+          <option value="todo">할 일</option>
+          <option value="doing">진행중</option>
+          <option value="done">완료</option>
+        </select>
+        <select id="filterPriority">
+          <option value="all">전체 우선순위</option>
+          <option value="high">높음</option>
+          <option value="medium">중간</option>
+          <option value="low">낮음</option>
+        </select>
+        <button id="clearDoneBtn" type="button" class="sub">완료 삭제</button>
+      </div>
+      <div id="taskList" class="list"></div>
+    </section>
+  </main>
 
-        // 해상도(=DPR) 제한으로 과도한 픽셀 렌더링 방지 (특히 모바일/레티나에서 렉 크게 줄어듦)
-        let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  <script>
+    const STORAGE_KEY = "assignment_todos_v1";
 
-        // 매 프레임 window.innerWidth/Height 접근 줄이기
-        let w = 0, h = 0;
+    const taskForm = document.getElementById("taskForm");
+    const taskList = document.getElementById("taskList");
+    const searchInput = document.getElementById("searchInput");
+    const filterStatus = document.getElementById("filterStatus");
+    const filterPriority = document.getElementById("filterPriority");
+    const clearDoneBtn = document.getElementById("clearDoneBtn");
 
-        // 팔레트
-        const colorPalette = [
-            { name: "GOLD", hue: 45, sat: 100 }, { name: "RED", hue: 0, sat: 100 },
-            { name: "PINK", hue: 330, sat: 100 }, { name: "PURPLE", hue: 270, sat: 80 },
-            { name: "BLUE", hue: 210, sat: 100 }, { name: "EMERALD", hue: 150, sat: 100 },
-            { name: "WHITE", hue: 0, sat: 0 }, { name: "ORANGE", hue: 30, sat: 100 },
-            { name: "LIME", hue: 90, sat: 100 }
-        ];
+    const totalCount = document.getElementById("totalCount");
+    const doingCount = document.getElementById("doingCount");
+    const doneCount = document.getElementById("doneCount");
+    const progressBar = document.getElementById("progressBar");
+    const progressText = document.getElementById("progressText");
 
-        // 색상 문자열을 미리 만들어(양자화) 파티클 생성 시 문자열/GC 폭탄 방지
-        const LIGHT_STEPS = [50, 55, 60, 65, 70];
-        const WHITE_STEPS = [92, 95, 98];
-        colorPalette.forEach(c => {
-            const steps = (c.name === "WHITE") ? WHITE_STEPS : LIGHT_STEPS;
-            c.styles = steps.map(l => `hsl(${c.hue}, ${c.sat}%, ${l}%)`);
+    let tasks = loadTasks();
+
+    function loadTasks() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveTasks() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString + "T00:00:00");
+      return new Intl.DateTimeFormat("ko-KR", { month: "short", day: "numeric", weekday: "short" }).format(date);
+    }
+
+    function priorityLabel(priority) {
+      if (priority === "high") return { text: "높음", className: "high" };
+      if (priority === "low") return { text: "낮음", className: "low" };
+      return { text: "중간", className: "mid" };
+    }
+
+    function statusLabel(status) {
+      if (status === "doing") return "진행중";
+      if (status === "done") return "완료";
+      return "할 일";
+    }
+
+    function updateSummary() {
+      const total = tasks.length;
+      const doing = tasks.filter((t) => t.status === "doing").length;
+      const done = tasks.filter((t) => t.status === "done").length;
+      const rate = total ? Math.round((done / total) * 100) : 0;
+
+      totalCount.textContent = total;
+      doingCount.textContent = doing;
+      doneCount.textContent = done;
+      progressBar.style.width = `${rate}%`;
+      progressText.textContent = `완료율 ${rate}%`;
+    }
+
+    function filteredTasks() {
+      const keyword = searchInput.value.trim().toLowerCase();
+      return [...tasks]
+        .filter((task) => filterStatus.value === "all" || task.status === filterStatus.value)
+        .filter((task) => filterPriority.value === "all" || task.priority === filterPriority.value)
+        .filter((task) => {
+          if (!keyword) return true;
+          return [task.title, task.subject, task.note].join(" ").toLowerCase().includes(keyword);
+        })
+        .sort((a, b) => {
+          if (a.status !== b.status) {
+            const order = { todo: 0, doing: 1, done: 2 };
+            return order[a.status] - order[b.status];
+          }
+          if (a.priority !== b.priority) {
+            const order = { high: 0, medium: 1, low: 2 };
+            return order[a.priority] - order[b.priority];
+          }
+          return a.dueDate.localeCompare(b.dueDate);
         });
+    }
 
-        intro.addEventListener('click', () => {
-            intro.style.opacity = '0';
-            setTimeout(() => { intro.style.display = 'none'; uiElements.forEach(el => el.classList.add('visible')); }, 1000);
-        });
+    function renderTasks() {
+      const visible = filteredTasks();
+      if (!visible.length) {
+        taskList.innerHTML = '<div class="empty">조건에 맞는 과제가 없습니다.</div>';
+        updateSummary();
+        return;
+      }
 
-        bgSlider.addEventListener('input', (e) => {
-            document.body.style.backgroundColor = `rgb(0, ${e.target.value / 2}, ${e.target.value})`;
-        });
+      taskList.innerHTML = visible.map((task) => {
+        const pr = priorityLabel(task.priority);
+        return `
+          <article class="task ${task.status}">
+            <div class="task-top">
+              <h3 class="task-title">${task.title}</h3>
+              <div class="meta">
+                <span class="chip">${statusLabel(task.status)}</span>
+                <span class="chip ${pr.className}">우선순위 ${pr.text}</span>
+              </div>
+            </div>
+            <div class="meta">
+              <span class="chip">${task.subject}</span>
+              <span class="chip">마감 ${formatDate(task.dueDate)}</span>
+            </div>
+            ${task.note ? `<p style="font-size:13px; margin:0;">${task.note}</p>` : ""}
+            <div class="task-actions">
+              <select data-action="status" data-id="${task.id}">
+                <option value="todo" ${task.status === "todo" ? "selected" : ""}>할 일</option>
+                <option value="doing" ${task.status === "doing" ? "selected" : ""}>진행중</option>
+                <option value="done" ${task.status === "done" ? "selected" : ""}>완료</option>
+              </select>
+              <button data-action="delete" data-id="${task.id}" class="sub" type="button">삭제</button>
+            </div>
+          </article>
+        `;
+      }).join("");
 
-        const selects = document.querySelectorAll('.color-picker');
-        selects.forEach((s, idx) => {
-            colorPalette.forEach((c, i) => {
-                const opt = document.createElement('option');
-                opt.value = i; opt.textContent = c.name;
-                if (idx === 0 && c.name === "GOLD") opt.selected = true;
-                if (idx === 1 && c.name === "RED") opt.selected = true;
-                if (idx === 2 && c.name === "WHITE") opt.selected = true;
-                s.appendChild(opt);
-            });
-        });
+      updateSummary();
+    }
 
-        function getColors() {
-            if (randomCheck.checked) return [1, 2, 3].map(() => colorPalette[(Math.random() * colorPalette.length) | 0]);
-            return Array.from(selects).map(s => colorPalette[s.value]);
-        }
+    taskForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const task = {
+        id: crypto.randomUUID(),
+        title: document.getElementById("title").value.trim(),
+        subject: document.getElementById("subject").value.trim(),
+        dueDate: document.getElementById("dueDate").value,
+        priority: document.getElementById("priority").value,
+        status: document.getElementById("status").value,
+        note: document.getElementById("note").value.trim(),
+      };
 
-        function resize() {
-            w = window.innerWidth;
-            h = window.innerHeight;
-            dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      if (!task.title || !task.subject || !task.dueDate) return;
 
-            canvas.width = Math.floor(w * dpr);
-            canvas.height = Math.floor(h * dpr);
-            canvas.style.width = w + 'px';
-            canvas.style.height = h + 'px';
+      tasks.push(task);
+      saveTasks();
+      taskForm.reset();
+      document.getElementById("priority").value = "medium";
+      document.getElementById("status").value = "todo";
+      renderTasks();
+    });
 
-            // resize 때 scale 누적되는 문제 방지
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        }
-        window.addEventListener('resize', resize, { passive: true });
-        resize();
+    taskList.addEventListener("click", (e) => {
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) return;
 
-        // ---- 성능 관리 ----
-        const PERF = {
-            lastNow: performance.now(),
-            fps: 60,
-            quality: 1,        // 0.35 ~ 1
-            decayBoost: 1,     // 파티클 과밀 시 더 빨리 사라지게
-            maxParticles: 32000,
-            maxFireworks: 60
-        };
+      if (target.dataset.action === "delete") {
+        tasks = tasks.filter((t) => t.id !== target.dataset.id);
+        saveTasks();
+        renderTasks();
+      }
+    });
 
-        // 방향 LUT로 sin/cos 폭발 스파이크 제거
-        const TAU = Math.PI * 2;
-        const DIR_LUT_SIZE = 1024;
-        const dirX = new Float32Array(DIR_LUT_SIZE);
-        const dirY = new Float32Array(DIR_LUT_SIZE);
-        for (let i = 0; i < DIR_LUT_SIZE; i++) {
-            const a = (i / DIR_LUT_SIZE) * TAU;
-            dirX[i] = Math.cos(a);
-            dirY[i] = Math.sin(a);
-        }
+    taskList.addEventListener("change", (e) => {
+      const target = e.target;
+      if (!(target instanceof HTMLSelectElement)) return;
+      if (target.dataset.action !== "status") return;
 
-        const fireworks = [];
-        const particles = [];
-        const particlePool = [];
-        let lastFill = '';
+      const task = tasks.find((t) => t.id === target.dataset.id);
+      if (!task) return;
 
-        class Firework {
-            constructor(sx, sy, tx, ty, colorSet) {
-                this.x = sx; this.y = sy; this.tx = tx; this.ty = ty;
-                this.colorSet = colorSet;
-                this.vy = -5.5;
-            }
-            update() {
-                this.y += this.vy;
-                return (this.y <= this.ty);
-            }
-            draw() {
-                ctx.globalAlpha = 1;
-                ctx.fillStyle = "rgba(255, 255, 240, 1)";
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, 1.2, 0, TAU);
-                ctx.fill();
-            }
-        }
+      task.status = target.value;
+      saveTasks();
+      renderTasks();
+    });
 
-        class Particle {
-            constructor() {
-                this.x = 0; this.y = 0;
-                this.vx = 0; this.vy = 0;
-                this.friction = 0.92;
-                this.gravity = 0.02;
-                this.alpha = 1;
-                this.decay = 0.006;
-                this.color = "hsl(0, 0%, 100%)";
-                this.size = 1;
-            }
+    [searchInput, filterStatus, filterPriority].forEach((el) => {
+      el.addEventListener("input", renderTasks);
+      el.addEventListener("change", renderTasks);
+    });
 
-            reset(x, y, color, zScale) {
-                this.x = x; this.y = y;
+    clearDoneBtn.addEventListener("click", () => {
+      tasks = tasks.filter((t) => t.status !== "done");
+      saveTasks();
+      renderTasks();
+    });
 
-                const idx = (Math.random() * DIR_LUT_SIZE) | 0;
-                const force = Math.random() * (9 * zScale) + 0.2;
-                this.vx = dirX[idx] * force;
-                this.vy = dirY[idx] * force;
-
-                this.friction = 0.9 + (Math.random() * 0.06);
-                this.gravity = (0.015 + Math.random() * 0.02) * zScale;
-
-                this.alpha = 1;
-                this.decay = (Math.random() * 0.003 + 0.004) / zScale;
-
-                // 문자열 생성 대신 미리 만들어둔 스타일 중 랜덤 선택
-                const styles = color.styles;
-                this.color = styles[(Math.random() * styles.length) | 0];
-
-                this.size = (Math.random() * 0.4 + 0.1) * zScale;
-            }
-
-            update() {
-                this.vx *= this.friction;
-                this.vy *= this.friction;
-                this.vy += this.gravity;
-
-                this.x += this.vx;
-                this.y += this.vy;
-
-                // 과밀 시 더 빨리 사라지게 해서 누적 방지
-                this.alpha -= this.decay * PERF.decayBoost;
-                return (this.alpha <= 0);
-            }
-
-            draw() {
-                // 부하가 큰 상황에서는 깜빡임(랜덤) 비용 줄이기
-                let a = this.alpha;
-                if (a < 0.6 && particles.length < PERF.maxParticles * 0.85) {
-                    if (Math.random() > 0.82) a = 1;
-                }
-
-                // fillStyle 변경을 최소화 (동일 문자열이면 재설정 안 함)
-                if (lastFill !== this.color) {
-                    ctx.fillStyle = this.color;
-                    lastFill = this.color;
-                }
-
-                ctx.globalAlpha = a;
-
-                const r = this.size;
-                if (r <= 1.1) {
-                    const d = r * 2;
-                    ctx.fillRect(this.x - r, this.y - r, d, d);
-                } else {
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, r, 0, TAU);
-                    ctx.fill();
-                }
-            }
-        }
-
-        function createParticles(x, y, colorSet) {
-            const zScale = Math.random() * 0.8 + 0.5;
-
-            // 화면/기기별 기본 파티클 수(원본 값 유지)
-            const base = (w < 600 ? 2400 : 5000) * zScale;
-
-            const headroom = PERF.maxParticles - particles.length;
-            if (headroom <= 0) return;
-
-            // 폭죽을 한 번에 많이 쏘면 각 폭발당 파티클 수를 자동으로 줄여 "느낌"은 유지하되 렉은 잡음
-            const loadFactor = Math.max(0.15, headroom / PERF.maxParticles);
-            const fwFactor = 1 / (1 + fireworks.length * 0.055);
-            let count = Math.floor(base * loadFactor * fwFactor * PERF.quality);
-
-            const minBurst = Math.floor((w < 600 ? 320 : 520) * zScale);
-            const maxBurst = Math.floor((w < 600 ? 2600 : 5200) * zScale);
-            count = Math.max(minBurst, Math.min(count, maxBurst, headroom));
-
-            for (let i = 0; i < count; i++) {
-                const p = particlePool.length ? particlePool.pop() : new Particle();
-                p.reset(x, y, colorSet[(Math.random() * colorSet.length) | 0], zScale);
-                particles.push(p);
-            }
-        }
-
-        function perfTick(now) {
-            const dt = now - PERF.lastNow;
-            PERF.lastNow = now;
-
-            const fpsNow = 1000 / Math.max(1, dt);
-            PERF.fps = PERF.fps * 0.9 + fpsNow * 0.1;
-
-            // 화면 크기에 따라 전체 파티클 상한 자동 조정
-            PERF.maxParticles = (w < 600 ? 18000 : 32000);
-
-            // fps가 떨어지면 다음 폭발부터 자동으로 품질(파티클 수) 낮춤
-            if (PERF.fps < 52) PERF.quality = Math.max(0.35, PERF.quality * 0.96);
-            else if (PERF.fps > 58) PERF.quality = Math.min(1, PERF.quality * 1.01);
-
-            // 과밀 시 decay를 올려서 "누적"을 빠르게 해소
-            const load = particles.length / PERF.maxParticles;
-            PERF.decayBoost = 1 + Math.max(0, load - 0.65) * 2.5;
-        }
-
-        function loop(now) {
-            requestAnimationFrame(loop);
-            perfTick(now);
-
-            // 잔상: 과밀할수록 조금 더 빨리 지워서 파티클 체류시간을 줄임
-            const load = particles.length / Math.max(1, PERF.maxParticles);
-            const fadeAlpha = 0.22 + Math.min(0.18, Math.max(0, load - 0.55) * 0.4);
-
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = 'rgb(0, 0, 0)';
-            ctx.globalAlpha = fadeAlpha;
-            ctx.fillRect(0, 0, w, h);
-
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.globalAlpha = 1;
-
-            // fillStyle 캐시 초기화
-            lastFill = '';
-
-            // 폭죽(로켓)
-            for (let i = fireworks.length - 1; i >= 0; i--) {
-                const f = fireworks[i];
-                if (f.update()) {
-                    createParticles(f.tx, f.ty, f.colorSet);
-
-                    // splice 대신 swap+pop (O(1) 삭제)
-                    fireworks[i] = fireworks[fireworks.length - 1];
-                    fireworks.pop();
-                } else {
-                    f.draw();
-                }
-            }
-
-            // 파티클: 너무 많아지면 "그리기"만 절반 스킵해서 프레임 방어 (움직임은 유지)
-            const drawSkip = (particles.length > PERF.maxParticles * 0.9);
-
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-
-                if (p.update()) {
-                    // 풀에 반환(재사용)해서 GC 스파이크 제거
-                    if (particlePool.length < PERF.maxParticles) particlePool.push(p);
-
-                    // splice 대신 swap+pop (O(1) 삭제)
-                    particles[i] = particles[particles.length - 1];
-                    particles.pop();
-                } else {
-                    if (!drawSkip || ((i & 1) === 0)) p.draw();
-                }
-            }
-
-            ctx.globalAlpha = 1;
-        }
-
-        function addFirework(x, y) {
-            if (fireworks.length >= PERF.maxFireworks) return;
-            fireworks.push(new Firework(x, h, x, y, getColors()));
-        }
-
-        // 멀티터치 대응 핸들러
-        function handleTouch(e) {
-            if (e.target.closest('.ui-container') || e.target.closest('.bg-control') || intro.style.display !== 'none') return;
-
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                addFirework(touch.clientX, touch.clientY);
-            }
-        }
-
-        function handleMouse(e) {
-            if (e.target.closest('.ui-container') || e.target.closest('.bg-control') || intro.style.display !== 'none') return;
-            addFirework(e.clientX, e.clientY);
-        }
-
-        window.addEventListener('mousedown', handleMouse);
-        window.addEventListener('touchstart', handleTouch, { passive: true });
-
-        requestAnimationFrame(loop);
-    </script>
+    renderTasks();
+  </script>
 </body>
 </html>
